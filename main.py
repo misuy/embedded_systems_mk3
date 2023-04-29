@@ -29,9 +29,9 @@ TRIANGLE_TEMPLATE = [
 TEMPLATES = [("square", SQUARE_TEMPLATE), ("rectangle", RECTANGLE_TEMPLATE), ("triangle", TRIANGLE_TEMPLATE)]
 
 
-RED_COLOR = ((0, 0, 255), np.array([0, 50, 30]), np.array([15, 255, 255]))
-GREEN_COLOR = ((0, 255, 0), np.array([45, 50, 30]), np.array([70, 255, 255]))
-BLUE_COLOR = ((255, 0, 0), np.array([110, 50, 30]), np.array([130, 255, 255]))
+RED_COLOR = ((0, 0, 255), np.array([0, 30, 20]), np.array([20, 255, 255]))
+GREEN_COLOR = ((0, 255, 0), np.array([45, 30, 20]), np.array([70, 255, 255]))
+BLUE_COLOR = ((255, 0, 0), np.array([110, 30, 20]), np.array([130, 255, 255]))
 COLORS = [RED_COLOR, GREEN_COLOR, BLUE_COLOR]
 
 
@@ -66,12 +66,10 @@ def calc_color_rates(frame, mask, colors):
 
 
 def render(frame, left_border, top_border, focused_rect_size, color, border_width):
-    width, height, channels = frame.shape
-
     start_point = (int(left_border), int(top_border))
     end_point = (int(left_border + focused_rect_size), int(top_border + focused_rect_size))
 
-    focused_rect = build_focused_rect(frame, start_point, end_point, color, border_width)
+    #focused_rect = build_focused_rect(frame, start_point, end_point, color, border_width)
     
     focused_hsv_frame = get_focused_hsv_frame(frame, start_point, end_point)
 
@@ -110,7 +108,35 @@ color = (0, 0, 0)
 border_width = 2
 
 
-cap = cv2.VideoCapture(0)
+def gstreamer_pipeline(
+    capture_width=1280,
+    capture_height=720,
+    display_width=1280,
+    display_height=720,
+    framerate=30,
+    flip_method=0,
+):
+    return (
+        "nvarguscamerasrc ! "
+        "video/x-raw(memory:NVMM), "
+        "width=(int)%d, height=(int)%d, "
+        "format=(string)NV12, framerate=(fraction)%d/1 ! "
+        "nvvidconv flip-method=%d ! "
+        "video/x-raw, width=(int)%d, height=(int)%d, format=(string)BGRx ! "
+        "videoconvert ! "
+        "video/x-raw, format=(string)BGR ! appsink max-buffers=1 drop=true"
+        % (
+            capture_width,
+            capture_height,
+            framerate,
+            flip_method,
+            display_width,
+            display_height,
+        )
+    )
+
+
+cap = cv2.VideoCapture(gstreamer_pipeline(flip_method=4), cv2.CAP_GSTREAMER)
 
 while(cap.isOpened()):
     ret, frame = cap.read()
